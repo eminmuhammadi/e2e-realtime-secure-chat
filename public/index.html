@@ -1,0 +1,124 @@
+<!-- public/index.html -->
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Secure Chat</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta charset="utf-8" />
+        <!-- lib -->
+        <script
+            src="https://cdn.socket.io/4.6.0/socket.io.min.js"
+            integrity="sha384-c79GN5VsunZvi+Q/WObgk2in0CbZsHnjEqvFxC5DxHn9lTfNce2WW6h2pH6u/kF+"
+            crossorigin="anonymous"
+        ></script>
+        <script src="bundle.js"></script>
+    </head>
+    <body>
+        <ul id="messages"></ul>
+
+        <input id="toPubK" type="text" placeholder="toPubK" autocomplete="off" />
+        <input id="message" type="text" placeholder="message" autocomplete="off" />
+        <button id="send">Send</button>
+
+        <!-- init -->
+        <script>
+            let socket_id, G, N;
+            let isUpdated,
+                isCompleted = false;
+            let pubK, privK;
+            let toPubK;
+
+            // Elements
+            const send = document.getElementById("send");
+            const toPubKInput = document.getElementById("toPubK");
+            const messagesList = document.getElementById("messages");
+
+            // Wait until DOM is loaded
+            document.addEventListener("DOMContentLoaded", () => {
+                // Connect to the Socket.io server
+                const socket = io();
+                const secComm = new SecureCommunication();
+
+                // Send init data to server
+                socket.emit("init", null);
+                // Receive init data from server
+                socket.on("init", (data) => {
+                    socket_id = data.socket_id;
+                    G = BigInt(data.G);
+                    N = BigInt(data.N);
+                    isUpdated = true;
+                });
+
+                // Wait unit G and N is not null
+                const SyncWithServer = () => {
+                    if (!isUpdated) {
+                        setTimeout(SyncWithServer, 100);
+                        console.log("Waiting for G and N");
+                    } else {
+                        secComm.setG(G);
+                        secComm.setN(N);
+                        console.log("G and N is updated");
+
+                        keyPair = secComm.generateKeyPair();
+                        pubK = keyPair.pubK;
+                        privK = keyPair.privK;
+
+                        isCompleted = true;
+                        console.log(pubK.toString());
+                    }
+                };
+
+                SyncWithServer();
+
+                // Click send button function
+                send.addEventListener("click", () => {
+                    if (!isCompleted) {
+                        alert("Waiting server to update G and N");
+                        return;
+                    }
+
+                    toPubK = BigInt(toPubKInput.value);
+                    if (toPubK == "" || typeof toPubK != "bigint") {
+                        alert("Please enter public key");
+                        return;
+                    }
+
+                    const key = secComm.generateSymmetricKey(toPubK, privK);
+                    const msg = message.value;
+                    const {chipertext, iv, authTag} = secComm.encrypt(msg, key);
+
+                    const data = {
+                        toPubK: toPubK.toString(),
+                        fromPubK: pubK.toString(),
+                        message: `${chipertext}.${iv}.${authTag}`,
+                    };
+
+                    socket.emit("send", data);
+                    message.value = "";
+
+                    // Display message
+                    const outgoingMessage = document.createElement("li");
+                    outgoingMessage.textContent = `${socket_id}: ${msg}`;
+                    messagesList.appendChild(outgoingMessage);
+                });
+
+                // Receive message from server
+                socket.on("chat", (reply) => {
+                    if (reply == "") return;
+                    if (reply.socket_id == socket_id) return;
+
+                    // split message to chipertext, iv, authTag
+                    const [chipertext, iv, authTag] = reply.data.message.split(".");
+                    const key = secComm.generateSymmetricKey(BigInt(reply.data.fromPubK), privK);
+                    const msg = secComm.decrypt(chipertext, iv, authTag, key);
+
+                    // Display message
+                    const incomingMessage = document.createElement("li");
+                    incomingMessage.textContent = `${reply.socket_id}: ${msg}`;
+                    messagesList.appendChild(incomingMessage);
+                });
+            });
+        </script>
+    </body>
+</html>
