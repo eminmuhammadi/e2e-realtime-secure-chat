@@ -16,3 +16,29 @@ Example:
     "timestamp": 1694292428594
 }
 ```
+
+## Setup
+
+```bash
+yarn install && sh certgen.sh
+```
+
+or
+
+You can use insecure app mode like this
+
+```js
+const {app, StartServer} = require("./server.js");
+const {registerRoutes} = require("./routes.js");
+const {registerSocket} = require("./socket.js");
+
+// Register routes
+registerRoutes(app);
+
+// Register socket.io
+registerSocket(app);
+
+// Start the server
+StartServer(app);
+```
+

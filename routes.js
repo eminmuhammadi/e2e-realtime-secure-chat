@@ -1,7 +1,9 @@
+const path = require("path");
+
 const registerRoutes = (app) => {
     // Serve static files (e.g., HTML, CSS, and JavaScript)
     app.register(require("@fastify/static"), {
-        root: __dirname + "/public",
+        root: path.join(__dirname, "public"),
     });
 
     app.get("/", (req, res) => {
