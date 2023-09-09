@@ -20,10 +20,14 @@ Example:
 ## Setup
 
 ```bash
-yarn install && sh certgen.sh
+yarn install && sh certgen.sh && node .
 ```
 
 or
+
+```bash
+yarn install && node .
+```
 
 You can use insecure app mode like this
 
