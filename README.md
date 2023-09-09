@@ -4,7 +4,7 @@ Uses Diffie-Hellman key exchange to generate a shared secret between two users. 
 
 Keys are generated on client side. Only the public keys are sent to the server. The server does not have access to the private keys and symmetric key.
 
-Example:
+Data is sent over a websocket connection:
 ```json
 {
     "socket_id": "qaY0wQGzyN37QhccAAAj",
