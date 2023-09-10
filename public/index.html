@@ -4,22 +4,35 @@
 <html>
     <head>
         <title>Secure Chat</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta charset="utf-8" />
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <!-- lib -->
-        <script
-            src="https://cdn.socket.io/4.6.0/socket.io.min.js"
-            integrity="sha384-c79GN5VsunZvi+Q/WObgk2in0CbZsHnjEqvFxC5DxHn9lTfNce2WW6h2pH6u/kF+"
-            crossorigin="anonymous"
-        ></script>
+        <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
         <script src="bundle.js"></script>
+        <script src="https://cdn.tailwindcss.com"></script>
     </head>
-    <body>
-        <ul id="messages"></ul>
-
-        <input id="toPubK" type="text" placeholder="toPubK" autocomplete="off" />
-        <input id="message" type="text" placeholder="message" autocomplete="off" />
-        <button id="send">Send</button>
+    <body class="bg-gray-50">
+        <div class="container mx-auto py-4">
+            <div class="h-screen bg-white shadow-md rounded-lg p-4">
+                <div class="mb-8">
+                    <input type="text" id="toPubK" placeholder="Public Key" class="w-full border p-2 rounded-lg" />
+                </div>
+                <div class="h-1/2 overflow-y-auto" id="messages"></div>
+                <form class="mt-8 flex" id="messageForm">
+                    <input
+                        type="text"
+                        id="message"
+                        placeholder="Type your message..."
+                        class="w-full border p-2 rounded-lg"
+                    />
+                    <input
+                        class="font-semibold ml-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                        type="submit"
+                        value="Send"
+                    />
+                </form>
+            </div>
+        </div>
 
         <!-- init -->
         <script>
@@ -33,6 +46,7 @@
             const send = document.getElementById("send");
             const toPubKInput = document.getElementById("toPubK");
             const messagesList = document.getElementById("messages");
+            const messageForm = document.getElementById("messageForm");
 
             // Wait until DOM is loaded
             document.addEventListener("DOMContentLoaded", () => {
@@ -72,7 +86,9 @@
                 SyncWithServer();
 
                 // Click send button function
-                send.addEventListener("click", () => {
+                messageForm.addEventListener("submit", (event) => {
+                    event.preventDefault();
+
                     if (!isCompleted) {
                         alert("Waiting server to update G and N");
                         return;
@@ -84,8 +100,13 @@
                         return;
                     }
 
-                    const key = secComm.generateSymmetricKey(toPubK, privK);
                     const msg = message.value;
+                    if (msg == "") {
+                        alert("Please enter message");
+                        return;
+                    }
+
+                    const key = secComm.generateSymmetricKey(toPubK, privK);
                     const {chipertext, iv, authTag} = secComm.encrypt(msg, key);
 
                     const data = {
@@ -98,15 +119,35 @@
                     message.value = "";
 
                     // Display message
-                    const outgoingMessage = document.createElement("li");
-                    outgoingMessage.textContent = `${socket_id}: ${msg}`;
+                    const outgoingMessage = document.createElement("div");
+                    outgoingMessage.classList.add(
+                        "bg-gray-200",
+                        "rounded-lg",
+                        "p-2",
+                        "mb-4",
+                        "text-sm",
+                        "w-1/2",
+                        "float-right",
+                        "clear-both",
+                        "display-block",
+                        "shadow"
+                    );
+                    outgoingMessage.innerHTML = `
+                        <div class="text-xs font-semibold truncate">${socket_id}</div>
+                        <div class="text-base pt-1 pb-2">${msg}</div>
+                        <div class="text-xs text-right text-gray-500 truncate">
+                            ${dateToString()}
+                        </div>
+                    `;
                     messagesList.appendChild(outgoingMessage);
+                    messagesList.scrollTop = messagesList.scrollHeight;
                 });
 
                 // Receive message from server
                 socket.on("chat", (reply) => {
                     if (reply == "") return;
                     if (reply.socket_id == socket_id) return;
+                    if (reply.data.toPubK != pubK.toString()) return;
 
                     // split message to chipertext, iv, authTag
                     const [chipertext, iv, authTag] = reply.data.message.split(".");
@@ -114,10 +155,46 @@
                     const msg = secComm.decrypt(chipertext, iv, authTag, key);
 
                     // Display message
-                    const incomingMessage = document.createElement("li");
-                    incomingMessage.textContent = `${reply.socket_id}: ${msg}`;
+                    const incomingMessage = document.createElement("div");
+                    incomingMessage.classList.add(
+                        "bg-gray-200",
+                        "rounded-lg",
+                        "p-2",
+                        "mb-4",
+                        "text-sm",
+                        "w-1/2",
+                        "float-left",
+                        "clear-both",
+                        "display-block",
+                        "shadow"
+                    );
+                    incomingMessage.innerHTML = `
+                        <div class="text-xs font-semibold truncate">${reply.socket_id}</div>
+                        <div class="text-base pt-1 pb-2">${msg}</div>
+                        <div class="text-xs text-right text-gray-500 truncate">
+                            ${dateToString(reply.timestamp)}
+                        </div>
+                    `;
                     messagesList.appendChild(incomingMessage);
+                    messagesList.scrollTop = messagesList.scrollHeight;
                 });
+
+                const dateToString = (timestamp = new Date()) => {
+                    const date = new Date(timestamp);
+                    // Specify the desired locale and options for the format
+                    const locale = "en-US"; // Adjust this to your preferred locale
+                    const options = {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                        hour12: true,
+                    };
+
+                    return date.toLocaleTimeString(locale, options);
+                };
             });
         </script>
     </body>
