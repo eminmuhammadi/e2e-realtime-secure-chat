@@ -9,8 +9,8 @@ Data is sent over a websocket connection:
 {
     "socket_id": "qaY0wQGzyN37QhccAAAj",
     "data": {
-        "toPubK": "5668120710338377530452541740064492970077693127994575717295844584863488274332",
-        "fromPubK": "31426841429515825643139668174624833013646094687860288273583744204911040821312",
+        "toPubK": "XXX",
+        "fromPubK": "XXX",
         "message": "q0gi3w==.2xJxABQsA/n5ZIOVI4ASqA==.ooGFkuZqxcgySSB5lWwzPw=="
     },
     "timestamp": 1694292428594
