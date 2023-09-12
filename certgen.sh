@@ -6,12 +6,6 @@ set -ex
 # Generate X509 certificate and private key without prompting for any input (using extension file)
 rm -rf .tls && mkdir -p .tls
 
-# Check if openssl is installed
-if ! command -v openssl &>/dev/null; then
-    echo "openssl could not be found, please install it first."
-    exit
-fi
-
 # Generate CA private key (ECDSA curve P-384)
 openssl ecparam -genkey -name secp384r1 -out .tls/ca-key.pem
 
